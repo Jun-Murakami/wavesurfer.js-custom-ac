@@ -31,9 +31,9 @@ class WebAudioPlayer extends EventEmitter<WebAudioPlayerEvents> {
   public seeking = false
   public autoplay = false
 
-  constructor(audioContext = new AudioContext()) {
+  constructor(audioContext?: AudioContext) {
     super()
-    this.audioContext = audioContext
+    this.audioContext = audioContext || new AudioContext()
     this.gainNode = this.audioContext.createGain()
     this.gainNode.connect(this.audioContext.destination)
   }

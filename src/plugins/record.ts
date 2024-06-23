@@ -18,6 +18,8 @@ export type RecordPluginOptions = {
   scrollingWaveformWindow?: number
   /** The timeslice to use for the media recorder */
   mediaRecorderTimeslice?: number
+  /** Custom AudioContext to use */
+  audioContext?: AudioContext
 }
 
 export type RecordPluginDeviceOptions = {
@@ -85,7 +87,7 @@ class RecordPlugin extends BasePlugin<RecordPluginEvents, RecordPluginOptions> {
   }
 
   public renderMicStream(stream: MediaStream): MicStream {
-    const audioContext = new AudioContext()
+    const audioContext = this.options.audioContext || new AudioContext()
     const source = audioContext.createMediaStreamSource(stream)
     const analyser = audioContext.createAnalyser()
     source.connect(analyser)
