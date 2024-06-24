@@ -1,5 +1,5 @@
 {
-  "name": "wavesurfer.js-cutomac",
+  "name": "wavesurfer.js-custom-ac",
   "version": "7.8.0",
   "license": "BSD-3-Clause",
   "author": "katspaugh",
@@ -15,7 +15,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git@github.com:Jun-Murakami/wavesurfer.js-cutomAC.git"
+    "url": "git@github.com:Jun-Murakami/wavesurfer.js-custom-ac.git"
   },
   "type": "module",
   "files": [
