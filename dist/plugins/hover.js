@@ -1,1 +1,103 @@
-class t{constructor(){this.listeners={}}on(t,e,s){if(this.listeners[t]||(this.listeners[t]=new Set),this.listeners[t].add(e),null==s?void 0:s.once){const s=()=>{this.un(t,s),this.un(t,e)};return this.on(t,s),s}return()=>this.un(t,e)}un(t,e){var s;null===(s=this.listeners[t])||void 0===s||s.delete(e)}once(t,e){return this.on(t,e,{once:!0})}unAll(){this.listeners={}}emit(t,...e){this.listeners[t]&&this.listeners[t].forEach((t=>t(...e)))}}class e extends t{constructor(t){super(),this.subscriptions=[],this.options=t}onInit(){}_init(t){this.wavesurfer=t,this.onInit()}destroy(){this.emit("destroy"),this.subscriptions.forEach((t=>t()))}}function s(t,e){const i=e.xmlns?document.createElementNS(e.xmlns,t):document.createElement(t);for(const[t,n]of Object.entries(e))if("children"===t)for(const[t,n]of Object.entries(e))"string"==typeof n?i.appendChild(document.createTextNode(n)):i.appendChild(s(t,n));else"style"===t?Object.assign(i.style,n):"textContent"===t?i.textContent=n:i.setAttribute(t,n.toString());return i}function i(t,e,i){const n=s(t,e||{});return null==i||i.appendChild(n),n}const n={lineWidth:1,labelSize:11,formatTimeCallback:t=>`${Math.floor(t/60)}:${`0${Math.floor(t)%60}`.slice(-2)}`};class r extends e{constructor(t){super(t||{}),this.unsubscribe=()=>{},this.onPointerMove=t=>{if(!this.wavesurfer)return;const e=this.wavesurfer.getWrapper().getBoundingClientRect(),{width:s}=e,i=t.clientX-e.left,n=Math.min(1,Math.max(0,i/s)),r=Math.min(s-this.options.lineWidth-1,i);this.wrapper.style.transform=`translateX(${r}px)`,this.wrapper.style.opacity="1";const o=this.wavesurfer.getDuration()||0;this.label.textContent=this.options.formatTimeCallback(o*n);const a=this.label.offsetWidth;this.label.style.transform=r+a>s?`translateX(-${a+this.options.lineWidth}px)`:"",this.emit("hover",n)},this.onPointerLeave=()=>{this.wrapper.style.opacity="0"},this.options=Object.assign({},n,t),this.wrapper=i("div",{part:"hover"}),this.label=i("span",{part:"hover-label"},this.wrapper)}static create(t){return new r(t)}addUnits(t){return`${t}${"number"==typeof t?"px":""}`}onInit(){if(!this.wavesurfer)throw Error("WaveSurfer is not initialized");const t=this.wavesurfer.options,e=this.options.lineColor||t.cursorColor||t.progressColor;Object.assign(this.wrapper.style,{position:"absolute",zIndex:10,left:0,top:0,height:"100%",pointerEvents:"none",borderLeft:`${this.addUnits(this.options.lineWidth)} solid ${e}`,opacity:"0",transition:"opacity .1s ease-in"}),Object.assign(this.label.style,{display:"block",backgroundColor:this.options.labelBackground,color:this.options.labelColor,fontSize:`${this.addUnits(this.options.labelSize)}`,transition:"transform .1s ease-in",padding:"2px 3px"});const s=this.wavesurfer.getWrapper();s.appendChild(this.wrapper),s.addEventListener("pointermove",this.onPointerMove),s.addEventListener("pointerleave",this.onPointerLeave),s.addEventListener("wheel",this.onPointerMove),this.unsubscribe=()=>{s.removeEventListener("pointermove",this.onPointerMove),s.removeEventListener("pointerleave",this.onPointerLeave),s.removeEventListener("wheel",this.onPointerLeave)}}destroy(){super.destroy(),this.unsubscribe(),this.wrapper.remove()}}export{r as default};
+/**
+ * The Hover plugin follows the mouse and shows a timestamp
+ */
+import BasePlugin from '../base-plugin.js';
+import createElement from '../dom.js';
+const defaultOptions = {
+    lineWidth: 1,
+    labelSize: 11,
+    formatTimeCallback(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const secondsRemainder = Math.floor(seconds) % 60;
+        const paddedSeconds = `0${secondsRemainder}`.slice(-2);
+        return `${minutes}:${paddedSeconds}`;
+    },
+};
+class HoverPlugin extends BasePlugin {
+    constructor(options) {
+        super(options || {});
+        this.unsubscribe = () => undefined;
+        this.onPointerMove = (e) => {
+            if (!this.wavesurfer)
+                return;
+            // Position
+            const bbox = this.wavesurfer.getWrapper().getBoundingClientRect();
+            const { width } = bbox;
+            const offsetX = e.clientX - bbox.left;
+            const relX = Math.min(1, Math.max(0, offsetX / width));
+            const posX = Math.min(width - this.options.lineWidth - 1, offsetX);
+            this.wrapper.style.transform = `translateX(${posX}px)`;
+            this.wrapper.style.opacity = '1';
+            // Timestamp
+            const duration = this.wavesurfer.getDuration() || 0;
+            this.label.textContent = this.options.formatTimeCallback(duration * relX);
+            const labelWidth = this.label.offsetWidth;
+            this.label.style.transform =
+                posX + labelWidth > width ? `translateX(-${labelWidth + this.options.lineWidth}px)` : '';
+            // Emit a hover event with the relative X position
+            this.emit('hover', relX);
+        };
+        this.onPointerLeave = () => {
+            this.wrapper.style.opacity = '0';
+        };
+        this.options = Object.assign({}, defaultOptions, options);
+        // Create the plugin elements
+        this.wrapper = createElement('div', { part: 'hover' });
+        this.label = createElement('span', { part: 'hover-label' }, this.wrapper);
+    }
+    static create(options) {
+        return new HoverPlugin(options);
+    }
+    addUnits(value) {
+        const units = typeof value === 'number' ? 'px' : '';
+        return `${value}${units}`;
+    }
+    /** Called by wavesurfer, don't call manually */
+    onInit() {
+        if (!this.wavesurfer) {
+            throw Error('WaveSurfer is not initialized');
+        }
+        const wsOptions = this.wavesurfer.options;
+        const lineColor = this.options.lineColor || wsOptions.cursorColor || wsOptions.progressColor;
+        // Vertical line
+        Object.assign(this.wrapper.style, {
+            position: 'absolute',
+            zIndex: 10,
+            left: 0,
+            top: 0,
+            height: '100%',
+            pointerEvents: 'none',
+            borderLeft: `${this.addUnits(this.options.lineWidth)} solid ${lineColor}`,
+            opacity: '0',
+            transition: 'opacity .1s ease-in',
+        });
+        // Timestamp label
+        Object.assign(this.label.style, {
+            display: 'block',
+            backgroundColor: this.options.labelBackground,
+            color: this.options.labelColor,
+            fontSize: `${this.addUnits(this.options.labelSize)}`,
+            transition: 'transform .1s ease-in',
+            padding: '2px 3px',
+        });
+        // Append the wrapper
+        const container = this.wavesurfer.getWrapper();
+        container.appendChild(this.wrapper);
+        // Attach pointer events
+        container.addEventListener('pointermove', this.onPointerMove);
+        container.addEventListener('pointerleave', this.onPointerLeave);
+        container.addEventListener('wheel', this.onPointerMove);
+        this.unsubscribe = () => {
+            container.removeEventListener('pointermove', this.onPointerMove);
+            container.removeEventListener('pointerleave', this.onPointerLeave);
+            container.removeEventListener('wheel', this.onPointerLeave);
+        };
+    }
+    /** Unmount */
+    destroy() {
+        super.destroy();
+        this.unsubscribe();
+        this.wrapper.remove();
+    }
+}
+export default HoverPlugin;

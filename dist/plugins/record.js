@@ -1,1 +1,278 @@
-function i(i,t,e,s){return new(e||(e=Promise))((function(r,o){function n(i){try{d(s.next(i))}catch(i){o(i)}}function a(i){try{d(s.throw(i))}catch(i){o(i)}}function d(i){var t;i.done?r(i.value):(t=i.value,t instanceof e?t:new e((function(i){i(t)}))).then(n,a)}d((s=s.apply(i,t||[])).next())}))}"function"==typeof SuppressedError&&SuppressedError;class t{constructor(){this.listeners={}}on(i,t,e){if(this.listeners[i]||(this.listeners[i]=new Set),this.listeners[i].add(t),null==e?void 0:e.once){const e=()=>{this.un(i,e),this.un(i,t)};return this.on(i,e),e}return()=>this.un(i,t)}un(i,t){var e;null===(e=this.listeners[i])||void 0===e||e.delete(t)}once(i,t){return this.on(i,t,{once:!0})}unAll(){this.listeners={}}emit(i,...t){this.listeners[i]&&this.listeners[i].forEach((i=>i(...t)))}}class e extends t{constructor(i){super(),this.subscriptions=[],this.options=i}onInit(){}_init(i){this.wavesurfer=i,this.onInit()}destroy(){this.emit("destroy"),this.subscriptions.forEach((i=>i()))}}class s extends t{constructor(){super(...arguments),this.unsubscribe=()=>{}}start(){this.unsubscribe=this.on("tick",(()=>{requestAnimationFrame((()=>{this.emit("tick")}))})),this.emit("tick")}stop(){this.unsubscribe()}destroy(){this.unsubscribe()}}const r=["audio/webm","audio/wav","audio/mpeg","audio/mp4","audio/mp3"];class o extends e{constructor(i){var t,e,r,o,n;super(Object.assign(Object.assign({},i),{audioBitsPerSecond:null!==(t=i.audioBitsPerSecond)&&void 0!==t?t:128e3,scrollingWaveform:null!==(e=i.scrollingWaveform)&&void 0!==e&&e,scrollingWaveformWindow:null!==(r=i.scrollingWaveformWindow)&&void 0!==r?r:5,renderRecordedAudio:null===(o=i.renderRecordedAudio)||void 0===o||o,mediaRecorderTimeslice:null!==(n=i.mediaRecorderTimeslice)&&void 0!==n?n:void 0})),this.stream=null,this.mediaRecorder=null,this.dataWindow=null,this.isWaveformPaused=!1,this.lastStartTime=0,this.lastDuration=0,this.duration=0,this.timer=new s,this.subscriptions.push(this.timer.on("tick",(()=>{const i=performance.now()-this.lastStartTime;this.duration=this.isPaused()?this.duration:this.lastDuration+i,this.emit("record-progress",this.duration)})))}static create(i){return new o(i||{})}renderMicStream(i){const t=this.options.audioContext||new AudioContext,e=t.createMediaStreamSource(i),s=t.createAnalyser();e.connect(s);const r=s.frequencyBinCount,o=new Float32Array(r);let n;const a=Math.floor((this.options.scrollingWaveformWindow||0)*t.sampleRate),d=()=>{var i;if(this.isWaveformPaused)return void(n=requestAnimationFrame(d));if(s.getFloatTimeDomainData(o),this.options.scrollingWaveform){const i=Math.min(a,this.dataWindow?this.dataWindow.length+r:r),t=new Float32Array(a);if(this.dataWindow){const e=Math.max(0,a-this.dataWindow.length);t.set(this.dataWindow.slice(-i+r),e)}t.set(o,a-r),this.dataWindow=t}else this.dataWindow=o;const t=this.options.scrollingWaveformWindow;this.wavesurfer&&(null!==(i=this.originalOptions)&&void 0!==i||(this.originalOptions={cursorWidth:this.wavesurfer.options.cursorWidth,interact:this.wavesurfer.options.interact}),this.wavesurfer.options.cursorWidth=0,this.wavesurfer.options.interact=!1,this.wavesurfer.load("",[this.dataWindow],t)),n=requestAnimationFrame(d)};return d(),{onDestroy:()=>{cancelAnimationFrame(n),null==e||e.disconnect(),null==t||t.close()},onEnd:()=>{this.isWaveformPaused=!0,cancelAnimationFrame(n),this.stopMic()}}}startMic(t){return i(this,void 0,void 0,(function*(){let i;try{i=yield navigator.mediaDevices.getUserMedia({audio:!(null==t?void 0:t.deviceId)||{deviceId:t.deviceId}})}catch(i){throw new Error("Error accessing the microphone: "+i.message)}const{onDestroy:e,onEnd:s}=this.renderMicStream(i);return this.subscriptions.push(this.once("destroy",e)),this.subscriptions.push(this.once("record-end",s)),this.stream=i,i}))}stopMic(){this.stream&&(this.stream.getTracks().forEach((i=>i.stop())),this.stream=null,this.mediaRecorder=null)}startRecording(t){return i(this,void 0,void 0,(function*(){const i=this.stream||(yield this.startMic(t));this.dataWindow=null;const e=this.mediaRecorder||new MediaRecorder(i,{mimeType:this.options.mimeType||r.find((i=>MediaRecorder.isTypeSupported(i))),audioBitsPerSecond:this.options.audioBitsPerSecond});this.mediaRecorder=e,this.stopRecording();const s=[];e.ondataavailable=i=>{i.data.size>0&&s.push(i.data),this.emit("record-data-available",i.data)};const o=i=>{var t;const r=new Blob(s,{type:e.mimeType});this.emit(i,r),this.options.renderRecordedAudio&&(this.applyOriginalOptionsIfNeeded(),null===(t=this.wavesurfer)||void 0===t||t.load(URL.createObjectURL(r)))};e.onpause=()=>o("record-pause"),e.onstop=()=>o("record-end"),e.start(this.options.mediaRecorderTimeslice),this.lastStartTime=performance.now(),this.lastDuration=0,this.duration=0,this.isWaveformPaused=!1,this.timer.start(),this.emit("record-start")}))}getDuration(){return this.duration}isRecording(){var i;return"recording"===(null===(i=this.mediaRecorder)||void 0===i?void 0:i.state)}isPaused(){var i;return"paused"===(null===(i=this.mediaRecorder)||void 0===i?void 0:i.state)}isActive(){var i;return"inactive"!==(null===(i=this.mediaRecorder)||void 0===i?void 0:i.state)}stopRecording(){var i;this.isActive()&&(null===(i=this.mediaRecorder)||void 0===i||i.stop(),this.timer.stop())}pauseRecording(){var i,t;this.isRecording()&&(this.isWaveformPaused=!0,null===(i=this.mediaRecorder)||void 0===i||i.requestData(),null===(t=this.mediaRecorder)||void 0===t||t.pause(),this.timer.stop(),this.lastDuration=this.duration)}resumeRecording(){var i;this.isPaused()&&(this.isWaveformPaused=!1,null===(i=this.mediaRecorder)||void 0===i||i.resume(),this.timer.start(),this.lastStartTime=performance.now(),this.emit("record-resume"))}static getAvailableAudioDevices(){return i(this,void 0,void 0,(function*(){return navigator.mediaDevices.enumerateDevices().then((i=>i.filter((i=>"audioinput"===i.kind))))}))}destroy(){this.applyOriginalOptionsIfNeeded(),super.destroy(),this.stopRecording(),this.stopMic()}applyOriginalOptionsIfNeeded(){this.wavesurfer&&this.originalOptions&&(this.wavesurfer.options.cursorWidth=this.originalOptions.cursorWidth,this.wavesurfer.options.interact=this.originalOptions.interact,delete this.originalOptions)}}export{o as default};
+/**
+ * Record audio from the microphone with a real-time waveform preview
+ */
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+import BasePlugin from '../base-plugin.js';
+import Timer from '../timer.js';
+const DEFAULT_BITS_PER_SECOND = 128000;
+const DEFAULT_SCROLLING_WAVEFORM_WINDOW = 5;
+const FPS = 100;
+const MIME_TYPES = ['audio/webm', 'audio/wav', 'audio/mpeg', 'audio/mp4', 'audio/mp3'];
+const findSupportedMimeType = () => MIME_TYPES.find((mimeType) => MediaRecorder.isTypeSupported(mimeType));
+class RecordPlugin extends BasePlugin {
+    /** Create an instance of the Record plugin */
+    constructor(options) {
+        var _a, _b, _c, _d, _e, _f;
+        super(Object.assign(Object.assign({}, options), { audioBitsPerSecond: (_a = options.audioBitsPerSecond) !== null && _a !== void 0 ? _a : DEFAULT_BITS_PER_SECOND, scrollingWaveform: (_b = options.scrollingWaveform) !== null && _b !== void 0 ? _b : false, scrollingWaveformWindow: (_c = options.scrollingWaveformWindow) !== null && _c !== void 0 ? _c : DEFAULT_SCROLLING_WAVEFORM_WINDOW, continuousWaveform: (_d = options.continuousWaveform) !== null && _d !== void 0 ? _d : false, renderRecordedAudio: (_e = options.renderRecordedAudio) !== null && _e !== void 0 ? _e : true, mediaRecorderTimeslice: (_f = options.mediaRecorderTimeslice) !== null && _f !== void 0 ? _f : undefined }));
+        this.stream = null;
+        this.mediaRecorder = null;
+        this.dataWindow = null;
+        this.isWaveformPaused = false;
+        this.lastStartTime = 0;
+        this.lastDuration = 0;
+        this.duration = 0;
+        this.timer = new Timer();
+        this.subscriptions.push(this.timer.on('tick', () => {
+            const currentTime = performance.now() - this.lastStartTime;
+            this.duration = this.isPaused() ? this.duration : this.lastDuration + currentTime;
+            this.emit('record-progress', this.duration);
+        }));
+    }
+    /** Create an instance of the Record plugin */
+    static create(options) {
+        return new RecordPlugin(options || {});
+    }
+    renderMicStream(stream) {
+        var _a;
+        const audioContext = this.options.audioContext || new AudioContext();
+        const source = audioContext.createMediaStreamSource(stream);
+        const analyser = audioContext.createAnalyser();
+        source.connect(analyser);
+        if (this.options.continuousWaveform) {
+            analyser.fftSize = 32;
+        }
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Float32Array(bufferLength);
+        let sampleIdx = 0;
+        if (this.wavesurfer) {
+            (_a = this.originalOptions) !== null && _a !== void 0 ? _a : (this.originalOptions = Object.assign({}, this.wavesurfer.options));
+            this.wavesurfer.options.interact = false;
+            if (this.options.scrollingWaveform) {
+                this.wavesurfer.options.cursorWidth = 0;
+            }
+        }
+        const drawWaveform = () => {
+            var _a, _b, _c, _d;
+            if (this.isWaveformPaused)
+                return;
+            analyser.getFloatTimeDomainData(dataArray);
+            if (this.options.scrollingWaveform) {
+                // Scrolling waveform
+                const windowSize = Math.floor((this.options.scrollingWaveformWindow || 0) * audioContext.sampleRate);
+                const newLength = Math.min(windowSize, this.dataWindow ? this.dataWindow.length + bufferLength : bufferLength);
+                const tempArray = new Float32Array(windowSize); // Always make it the size of the window, filling with zeros by default
+                if (this.dataWindow) {
+                    const startIdx = Math.max(0, windowSize - this.dataWindow.length);
+                    tempArray.set(this.dataWindow.slice(-newLength + bufferLength), startIdx);
+                }
+                tempArray.set(dataArray, windowSize - bufferLength);
+                this.dataWindow = tempArray;
+            }
+            else if (this.options.continuousWaveform) {
+                // Continuous waveform
+                if (!this.dataWindow) {
+                    const size = this.options.continuousWaveformDuration
+                        ? Math.round(this.options.continuousWaveformDuration * FPS)
+                        : ((_b = (_a = this.wavesurfer) === null || _a === void 0 ? void 0 : _a.getWidth()) !== null && _b !== void 0 ? _b : 0) * window.devicePixelRatio;
+                    this.dataWindow = new Float32Array(size);
+                }
+                let maxValue = 0;
+                for (let i = 0; i < bufferLength; i++) {
+                    const value = Math.abs(dataArray[i]);
+                    if (value > maxValue) {
+                        maxValue = value;
+                    }
+                }
+                if (sampleIdx + 1 > this.dataWindow.length) {
+                    const tempArray = new Float32Array(this.dataWindow.length * 2);
+                    tempArray.set(this.dataWindow, 0);
+                    this.dataWindow = tempArray;
+                }
+                this.dataWindow[sampleIdx] = maxValue;
+                sampleIdx++;
+            }
+            else {
+                this.dataWindow = dataArray;
+            }
+            // Render the waveform
+            if (this.wavesurfer) {
+                const totalDuration = ((_d = (_c = this.dataWindow) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0) / FPS;
+                this.wavesurfer
+                    .load('', [this.dataWindow], this.options.scrollingWaveform ? this.options.scrollingWaveformWindow : totalDuration)
+                    .then(() => {
+                    if (this.wavesurfer && this.options.continuousWaveform) {
+                        this.wavesurfer.setTime(this.getDuration() / 1000);
+                        if (!this.wavesurfer.options.minPxPerSec) {
+                            this.wavesurfer.setOptions({
+                                minPxPerSec: this.wavesurfer.getWidth() / this.wavesurfer.getDuration(),
+                            });
+                        }
+                    }
+                })
+                    .catch((err) => {
+                    console.error('Error rendering real-time recording data:', err);
+                });
+            }
+        };
+        const intervalId = setInterval(drawWaveform, 1000 / FPS);
+        return {
+            onDestroy: () => {
+                clearInterval(intervalId);
+                source === null || source === void 0 ? void 0 : source.disconnect();
+                audioContext === null || audioContext === void 0 ? void 0 : audioContext.close();
+            },
+            onEnd: () => {
+                this.isWaveformPaused = true;
+                clearInterval(intervalId);
+                this.stopMic();
+            },
+        };
+    }
+    /** Request access to the microphone and start monitoring incoming audio */
+    startMic(options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let stream;
+            try {
+                stream = yield navigator.mediaDevices.getUserMedia({
+                    audio: (options === null || options === void 0 ? void 0 : options.deviceId) ? { deviceId: options.deviceId } : true,
+                });
+            }
+            catch (err) {
+                throw new Error('Error accessing the microphone: ' + err.message);
+            }
+            const { onDestroy, onEnd } = this.renderMicStream(stream);
+            this.subscriptions.push(this.once('destroy', onDestroy));
+            this.subscriptions.push(this.once('record-end', onEnd));
+            this.stream = stream;
+            return stream;
+        });
+    }
+    /** Stop monitoring incoming audio */
+    stopMic() {
+        if (!this.stream)
+            return;
+        this.stream.getTracks().forEach((track) => track.stop());
+        this.stream = null;
+        this.mediaRecorder = null;
+    }
+    /** Start recording audio from the microphone */
+    startRecording(options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const stream = this.stream || (yield this.startMic(options));
+            this.dataWindow = null;
+            const mediaRecorder = this.mediaRecorder ||
+                new MediaRecorder(stream, {
+                    mimeType: this.options.mimeType || findSupportedMimeType(),
+                    audioBitsPerSecond: this.options.audioBitsPerSecond,
+                });
+            this.mediaRecorder = mediaRecorder;
+            this.stopRecording();
+            const recordedChunks = [];
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+                this.emit('record-data-available', event.data);
+            };
+            const emitWithBlob = (ev) => {
+                var _a;
+                const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
+                this.emit(ev, blob);
+                if (this.options.renderRecordedAudio) {
+                    this.applyOriginalOptionsIfNeeded();
+                    (_a = this.wavesurfer) === null || _a === void 0 ? void 0 : _a.load(URL.createObjectURL(blob));
+                }
+            };
+            mediaRecorder.onpause = () => emitWithBlob('record-pause');
+            mediaRecorder.onstop = () => emitWithBlob('record-end');
+            mediaRecorder.start(this.options.mediaRecorderTimeslice);
+            this.lastStartTime = performance.now();
+            this.lastDuration = 0;
+            this.duration = 0;
+            this.isWaveformPaused = false;
+            this.timer.start();
+            this.emit('record-start');
+        });
+    }
+    /** Get the duration of the recording */
+    getDuration() {
+        return this.duration;
+    }
+    /** Check if the audio is being recorded */
+    isRecording() {
+        var _a;
+        return ((_a = this.mediaRecorder) === null || _a === void 0 ? void 0 : _a.state) === 'recording';
+    }
+    isPaused() {
+        var _a;
+        return ((_a = this.mediaRecorder) === null || _a === void 0 ? void 0 : _a.state) === 'paused';
+    }
+    isActive() {
+        var _a;
+        return ((_a = this.mediaRecorder) === null || _a === void 0 ? void 0 : _a.state) !== 'inactive';
+    }
+    /** Stop the recording */
+    stopRecording() {
+        var _a;
+        if (this.isActive()) {
+            (_a = this.mediaRecorder) === null || _a === void 0 ? void 0 : _a.stop();
+            this.timer.stop();
+        }
+    }
+    /** Pause the recording */
+    pauseRecording() {
+        var _a, _b;
+        if (this.isRecording()) {
+            this.isWaveformPaused = true;
+            (_a = this.mediaRecorder) === null || _a === void 0 ? void 0 : _a.requestData();
+            (_b = this.mediaRecorder) === null || _b === void 0 ? void 0 : _b.pause();
+            this.timer.stop();
+            this.lastDuration = this.duration;
+        }
+    }
+    /** Resume the recording */
+    resumeRecording() {
+        var _a;
+        if (this.isPaused()) {
+            this.isWaveformPaused = false;
+            (_a = this.mediaRecorder) === null || _a === void 0 ? void 0 : _a.resume();
+            this.timer.start();
+            this.lastStartTime = performance.now();
+            this.emit('record-resume');
+        }
+    }
+    /** Get a list of available audio devices
+     * You can use this to get the device ID of the microphone to use with the startMic and startRecording methods
+     * Will return an empty array if the browser doesn't support the MediaDevices API or if the user has not granted access to the microphone
+     * You can ask for permission to the microphone by calling startMic
+     */
+    static getAvailableAudioDevices() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return navigator.mediaDevices
+                .enumerateDevices()
+                .then((devices) => devices.filter((device) => device.kind === 'audioinput'));
+        });
+    }
+    /** Destroy the plugin */
+    destroy() {
+        this.applyOriginalOptionsIfNeeded();
+        super.destroy();
+        this.stopRecording();
+        this.stopMic();
+    }
+    applyOriginalOptionsIfNeeded() {
+        if (this.wavesurfer && this.originalOptions) {
+            this.wavesurfer.setOptions(this.originalOptions);
+            delete this.originalOptions;
+        }
+    }
+}
+export default RecordPlugin;

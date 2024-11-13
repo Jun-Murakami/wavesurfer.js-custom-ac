@@ -180,6 +180,8 @@ type WaveSurferOptions = {
     backend?: 'WebAudio' | 'MediaElement';
     /** Custom AudioContext to use */
     audioContext?: AudioContext;
+    /** Nonce for CSP if necessary */
+    cspNonce?: string;
 };
 declare const defaultOptions: {
     waveColor: string;

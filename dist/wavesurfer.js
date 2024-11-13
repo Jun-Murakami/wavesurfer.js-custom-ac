@@ -35,7 +35,9 @@ class WaveSurfer extends Player {
     /** Create a new WaveSurfer instance */
     constructor(options) {
         const media = options.media ||
-            (options.backend === 'WebAudio' ? new WebAudioPlayer(options.audioContext) : undefined);
+            (options.backend === 'WebAudio'
+                ? new WebAudioPlayer(options.audioContext)
+                : undefined);
         super({
             media,
             mediaControls: options.mediaControls,

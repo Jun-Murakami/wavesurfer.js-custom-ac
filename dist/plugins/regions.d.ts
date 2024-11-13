@@ -7,12 +7,21 @@ import BasePlugin, { type BasePluginEvents } from '../base-plugin.js';
 import EventEmitter from '../event-emitter.js';
 export type RegionsPluginOptions = undefined;
 export type RegionsPluginEvents = BasePluginEvents & {
+    /** When a region is created */
     'region-created': [region: Region];
+    /** When a region is being updated */
+    'region-update': [region: Region, side?: 'start' | 'end'];
+    /** When a region is done updating */
     'region-updated': [region: Region];
+    /** When a region is removed */
     'region-removed': [region: Region];
+    /** When a region is clicked */
     'region-clicked': [region: Region, e: MouseEvent];
+    /** When a region is double-clicked */
     'region-double-clicked': [region: Region, e: MouseEvent];
+    /** When playback enters a region */
     'region-in': [region: Region];
+    /** When playback leaves a region */
     'region-out': [region: Region];
 };
 export type RegionEvents = {
@@ -57,7 +66,7 @@ export type RegionParams = {
     /** Allow/Disallow contenteditable property for content */
     contentEditable?: boolean;
 };
-declare class SingleRegion extends EventEmitter<RegionEvents> {
+declare class SingleRegion extends EventEmitter<RegionEvents> implements Region {
     private totalDuration;
     private numberOfChannels;
     element: HTMLElement;
@@ -127,4 +136,4 @@ declare class RegionsPlugin extends BasePlugin<RegionsPluginEvents, RegionsPlugi
     destroy(): void;
 }
 export default RegionsPlugin;
-export type Region = InstanceType<typeof SingleRegion>;
+export type Region = SingleRegion;

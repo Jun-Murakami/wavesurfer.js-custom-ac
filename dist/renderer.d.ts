@@ -46,6 +46,7 @@ declare class Renderer extends EventEmitter<RendererEvents> {
     destroy(): void;
     private createDelay;
     private convertColorValues;
+    private getPixelRatio;
     private renderBarWaveform;
     private renderLineWaveform;
     private renderWaveform;

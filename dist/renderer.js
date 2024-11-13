@@ -144,8 +144,9 @@ class Renderer extends EventEmitter {
     initHtml() {
         const div = document.createElement('div');
         const shadow = div.attachShadow({ mode: 'open' });
+        const cspNonce = this.options.cspNonce && typeof this.options.cspNonce === 'string' ? this.options.cspNonce.replace(/"/g, '') : '';
         shadow.innerHTML = `
-      <style>
+      <style${cspNonce ? ` nonce="${cspNonce}"` : ''}>
         :host {
           user-select: none;
           min-width: 1px;
@@ -296,13 +297,16 @@ class Renderer extends EventEmitter {
         });
         return gradient;
     }
+    getPixelRatio() {
+        return Math.max(1, window.devicePixelRatio || 1);
+    }
     renderBarWaveform(channelData, options, ctx, vScale) {
         const topChannel = channelData[0];
         const bottomChannel = channelData[1] || channelData[0];
         const length = topChannel.length;
         const { width, height } = ctx.canvas;
         const halfHeight = height / 2;
-        const pixelRatio = window.devicePixelRatio || 1;
+        const pixelRatio = this.getPixelRatio();
         const barWidth = options.barWidth ? options.barWidth * pixelRatio : 1;
         const barGap = options.barGap ? options.barGap * pixelRatio : options.barWidth ? barWidth / 2 : 0;
         const barRadius = options.barRadius || 0;
@@ -394,7 +398,7 @@ class Renderer extends EventEmitter {
         this.renderLineWaveform(channelData, options, ctx, vScale);
     }
     renderSingleCanvas(data, options, width, height, offset, canvasContainer, progressContainer) {
-        const pixelRatio = window.devicePixelRatio || 1;
+        const pixelRatio = this.getPixelRatio();
         const canvas = document.createElement('canvas');
         canvas.width = Math.round(width * pixelRatio);
         canvas.height = Math.round(height * pixelRatio);
@@ -418,13 +422,8 @@ class Renderer extends EventEmitter {
         }
     }
     renderMultiCanvas(channelData, options, width, height, canvasContainer, progressContainer) {
-        const pixelRatio = window.devicePixelRatio || 1;
+        const pixelRatio = this.getPixelRatio();
         const { clientWidth } = this.scrollContainer;
-        // Render a single canvas if it fits in the viewport
-        if (clientWidth * pixelRatio >= width) {
-            this.renderSingleCanvas(channelData, options, width, height, 0, canvasContainer, progressContainer);
-            return;
-        }
         const totalWidth = width / pixelRatio;
         let singleCanvasWidth = Math.min(Renderer.MAX_CANVAS_WIDTH, clientWidth, totalWidth);
         let drawnIndexes = {};
@@ -465,6 +464,14 @@ class Renderer extends EventEmitter {
         };
         // Calculate how many canvases to render
         const numCanvases = Math.ceil(totalWidth / singleCanvasWidth);
+        // Render all canvases if the waveform doesn't scroll
+        if (!this.isScrollable) {
+            for (let i = 0; i < numCanvases; i++) {
+                draw(i);
+            }
+            return;
+        }
+        // Lazy rendering
         const viewPosition = this.scrollContainer.scrollLeft / totalWidth;
         const startCanvas = Math.floor(viewPosition * numCanvases);
         // Draw the canvases in the viewport first
@@ -515,7 +522,7 @@ class Renderer extends EventEmitter {
                     typeof this.options.width === 'number' ? `${this.options.width}px` : this.options.width;
             }
             // Determine the width of the waveform
-            const pixelRatio = window.devicePixelRatio || 1;
+            const pixelRatio = this.getPixelRatio();
             const parentWidth = this.scrollContainer.clientWidth;
             const scrollWidth = Math.ceil(audioData.duration * (this.options.minPxPerSec || 0));
             // Whether the container should scroll

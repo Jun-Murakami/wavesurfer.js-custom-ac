@@ -7,12 +7,16 @@ export type RecordPluginOptions = {
     mimeType?: MediaRecorderOptions['mimeType'];
     /** The audio bitrate to use when recording audio, defaults to 128000 to avoid a VBR encoding. */
     audioBitsPerSecond?: MediaRecorderOptions['audioBitsPerSecond'];
-    /** Whether to render the recorded audio, true by default */
+    /** Whether to render the recorded audio at the end, true by default */
     renderRecordedAudio?: boolean;
     /** Whether to render the scrolling waveform, false by default */
     scrollingWaveform?: boolean;
     /** The duration of the scrolling waveform window, defaults to 5 seconds */
     scrollingWaveformWindow?: number;
+    /** Accumulate and render the waveform data as the audio is being recorded, false by default */
+    continuousWaveform?: boolean;
+    /** The duration of the continuous waveform, in seconds */
+    continuousWaveformDuration?: number;
     /** The timeslice to use for the media recorder */
     mediaRecorderTimeslice?: number;
     /** Custom AudioContext to use */
@@ -25,12 +29,16 @@ export type RecordPluginDeviceOptions = {
     };
 };
 export type RecordPluginEvents = BasePluginEvents & {
+    /** Fires when the recording starts */
     'record-start': [];
+    /** Fires when the recording is paused */
     'record-pause': [blob: Blob];
+    /** Fires when the recording is resumed */
     'record-resume': [];
     'record-end': [blob: Blob];
     /** Fires continuously while recording */
     'record-progress': [duration: number];
+    /** On every new recorded chunk */
     'record-data-available': [blob: Blob];
 };
 type MicStream = {
@@ -42,7 +50,7 @@ declare class RecordPlugin extends BasePlugin<RecordPluginEvents, RecordPluginOp
     private mediaRecorder;
     private dataWindow;
     private isWaveformPaused;
-    private originalOptions;
+    private originalOptions?;
     private timer;
     private lastStartTime;
     private lastDuration;

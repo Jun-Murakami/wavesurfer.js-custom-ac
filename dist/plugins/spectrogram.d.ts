@@ -44,10 +44,30 @@ export type SpectrogramPluginOptions = {
     /** Max frequency to scale spectrogram. Set this to samplerate/2 to draw whole range of spectrogram. */
     frequencyMax?: number;
     /**
+     * Based on: https://manual.audacityteam.org/man/spectrogram_settings.html
+     * - Linear: Linear The linear vertical scale goes linearly from 0 kHz to 20 kHz frequency by default.
+     * - Mel: The name Mel comes from the word melody to indicate that the scale is based on pitch comparisons. This is the default scale.
+     */
+    scale?: 'linear' | 'mel';
+    /**
+     * Increases / decreases the brightness of the display.
+     * For small signals where the display is mostly "blue" (dark) you can increase this value to see brighter colors and give more detail.
+     * If the display has too much "white", decrease this value.
+     * The default is 20dB and corresponds to a -20 dB signal at a particular frequency being displayed as "white". */
+    gainDB?: number;
+    /**
+     * Affects the range of signal sizes that will be displayed as colors.
+     * The default is 80 dB and means that you will not see anything for signals 80 dB below the value set for "Gain".
+     */
+    rangeDB?: number;
+    /**
      * A 256 long array of 4-element arrays. Each entry should contain a float between 0 and 1 and specify r, g, b, and alpha.
      * Each entry should contain a float between 0 and 1 and specify r, g, b, and alpha.
+     * - gray: Gray scale.
+     * - igray: Inverted gray scale.
+     * - roseus: From https://github.com/dofuuz/roseus/blob/main/roseus/cmap/roseus.py
      */
-    colorMap?: number[][];
+    colorMap?: number[][] | 'gray' | 'igray' | 'roseus';
     /** Render a spectrogram for each channel independently when true. */
     splitChannels?: boolean;
 };
@@ -65,6 +85,10 @@ declare class SpectrogramPlugin extends BasePlugin<SpectrogramPluginEvents, Spec
     private createCanvas;
     private render;
     private drawSpectrogram;
+    private hzToMel;
+    private melToHz;
+    private createMelFilterBank;
+    private applyMelFilterBank;
     private getFrequencies;
     private freqType;
     private unitType;

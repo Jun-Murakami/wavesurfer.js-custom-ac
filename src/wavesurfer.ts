@@ -78,6 +78,8 @@ export type WaveSurferOptions = {
   backend?: 'WebAudio' | 'MediaElement'
   /** Custom AudioContext to use */
   audioContext?: AudioContext
+  /** Nonce for CSP if necessary */
+  cspNonce?: string
 }
 
 const defaultOptions = {
@@ -164,7 +166,9 @@ class WaveSurfer extends Player<WaveSurferEvents> {
   constructor(options: WaveSurferOptions) {
     const media =
       options.media ||
-      (options.backend === 'WebAudio' ? (new WebAudioPlayer(options.audioContext) as unknown as HTMLAudioElement) : undefined)
+      (options.backend === 'WebAudio'
+        ? (new WebAudioPlayer(options.audioContext) as unknown as HTMLAudioElement)
+        : undefined)
 
     super({
       media,
